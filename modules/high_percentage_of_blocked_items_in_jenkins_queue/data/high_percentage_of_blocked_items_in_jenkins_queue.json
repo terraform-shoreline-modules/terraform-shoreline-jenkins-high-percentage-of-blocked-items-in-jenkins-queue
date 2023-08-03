@@ -1,0 +1,174 @@
+{
+  "name": "high_percentage_of_blocked_items_in_jenkins_queue",
+  "description": "This incident type refers to a situation where there is a high percentage of blocked items in the Jenkins queue, which may be caused by various issues such as slow build or test execution times, network or server issues, or other performance-related problems. This can lead to delays in software development and deployment processes, resulting in longer wait times for developers and ultimately, slower time-to-market for software products.",
+  "params": [
+    {
+      "name": "JENKINS_NODE",
+      "value": ""
+    },
+    {
+      "name": "JENKINS_API_TOKEN",
+      "value": ""
+    },
+    {
+      "name": "NEW_EXECUTORS",
+      "value": ""
+    },
+    {
+      "name": "MAX_LOAD",
+      "value": ""
+    },
+    {
+      "name": "NAME_OF_BUILD_AGENT",
+      "value": ""
+    },
+    {
+      "name": "JENKINS_URL",
+      "value": ""
+    },
+    {
+      "name": "BUILD_AGENT_URL",
+      "value": ""
+    },
+    {
+      "name": "HOST_NAME",
+      "value": ""
+    },
+    {
+      "name": "K8S_CLUSTER_NAME",
+      "value": ""
+    },
+    {
+      "name": "NAMESPACE",
+      "value": ""
+    }
+  ],
+  "cells": [
+    {
+      "name": "cell_1",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## High percentage of blocked items in Jenkins queue.\nThis incident type refers to a situation where there is a high percentage of blocked items in the Jenkins queue, which may be caused by various issues such as slow build or test execution times, network or server issues, or other performance-related problems. This can lead to delays in software development and deployment processes, resulting in longer wait times for developers and ultimately, slower time-to-market for software products."
+    },
+    {
+      "name": "cell_2",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check Jenkins queue size"
+    },
+    {
+      "name": "cell_3",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `curl -s -X GET ${JENKINS_URL}/queue/api/json | jq '.items | length'`"
+    },
+    {
+      "name": "cell_4",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if Jenkins queue is blocked"
+    },
+    {
+      "name": "cell_5",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `curl -s -X GET ${JENKINS_URL}/queue/api/json | jq '.items[].blocked'`"
+    },
+    {
+      "name": "cell_6",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if Jenkins server is running"
+    },
+    {
+      "name": "cell_7",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `systemctl status jenkins`"
+    },
+    {
+      "name": "cell_8",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if Jenkins is overloaded"
+    },
+    {
+      "name": "cell_9",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `top -bn1 | grep -Ei 'jenkins|java'`"
+    },
+    {
+      "name": "cell_10",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if Jenkins is running out of memory"
+    },
+    {
+      "name": "cell_11",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `curl -s -X GET ${JENKINS_URL}/computer/api/json | jq '.computer[].executors[].currentExecutable.url' | xargs curl -s -X GET | jq '.actions[].causes[].shortDescription' | grep 'OutOfMemoryError'`"
+    },
+    {
+      "name": "cell_12",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check Jenkins logs for errors"
+    },
+    {
+      "name": "cell_13",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `tail -n 50 /var/log/jenkins/jenkins.log | grep -Ei 'error|exception'`"
+    },
+    {
+      "name": "cell_14",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Check if there are any issues with the Jenkins node"
+    },
+    {
+      "name": "cell_15",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "(host | host_name=$HOST_NAME) union (pod | k8s_cluster_name=$K8S_CLUSTER_NAME | namespace=$NAMESPACE) | `ssh ${JENKINS_NODE} 'uptime; free -m; df -h'`"
+    },
+    {
+      "name": "cell_16",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## An issue with the build agents, such as agents being offline or misconfigured, causing the high percentage of blocked items in the queue."
+    },
+    {
+      "name": "cell_17",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_check_build_agent_status($NAME_OF_BUILD_AGENT, $BUILD_AGENT_URL)"
+    },
+    {
+      "name": "cell_18",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## An issue with the Jenkins server, such as a bug in the Jenkins software or an overload of the server, causing the high percentage of blocked items in the queue."
+    },
+    {
+      "name": "cell_19",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_jenkins_status_check($JENKINS_URL)"
+    },
+    {
+      "name": "cell_20",
+      "type": "MARKDOWN",
+      "enabled": true,
+      "content": "## Increase the number of executors on the Jenkins server to improve job processing and reduce queue blockages."
+    },
+    {
+      "name": "cell_21",
+      "type": "OP_LANG",
+      "enabled": true,
+      "content": "host | host_name=$HOST_NAME | invoke_jenkins_increase_executors($JENKINS_API_TOKEN, $NEW_EXECUTORS, $JENKINS_URL)"
+    }
+  ]
+}
